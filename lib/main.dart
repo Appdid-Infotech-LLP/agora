@@ -21,7 +21,7 @@ class _MyAppState extends State<MyApp> {
     String channelName = "agoratest";
     String token = "007eJxTYNAvL8/I2/r2v3zfog+frHZPue+yuuSH5pUoj5DyHMP0w38UGEwMjJINTYySLVMsDEwMzMwTTQ0NTYzTUoBEkmViiknaB4uUhkBGhta50syMDBAI4nMyJKbnFyWWpBaXMDAAAH63IsE=";
     
-    int uid = 0; // uid of the local user
+    int uid = 1; // uid of the local user
 
     int? _remoteUid; // uid of the remote user
     bool _isJoined = false; // Indicates if the local user has joined the channel
