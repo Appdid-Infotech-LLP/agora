@@ -37,11 +37,19 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+           <meta-data
+    android:name="com.dexterous.flutterlocalnotifications.NotificationIconPlugin"
+    android:resource="@drawable/ic_launcher"
+    />
+
+
         <meta-data
     android:name="firebase_messaging_auto_init_enabled"
     android:value="false" />
 <meta-data
     android:name="firebase_analytics_collection_enabled"
     android:value="false" />    
+   <meta-data android:name="com.onesignal.NotificationServiceExtension"
+     android:value="com.onesignal.example.NotificationServiceExtension" />
     </application>
 </manifest>
