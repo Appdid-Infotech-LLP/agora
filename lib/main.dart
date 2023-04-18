@@ -1,14 +1,34 @@
 import 'dart:async';
+import 'package:agora/video_call_screen.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 
 const String appId = "402c142c9d804067a51143fd143b9ad4";
 
-void main() => runApp(const MaterialApp(
-  home: MyApp()));
+void main() async{ 
+  await Firebase.initializeApp();
+String? fcmToken = await FirebaseMessaging.instance.getToken();
+  print("FCM token: $fcmToken");
+// FirebaseMessaging.instance.onTokenRefresh
+//     .listen((fcmToken) {
+//       print(fcmToken);    
+//       // TODO: If necessary send token to application server.
+
+//       // Note: This callback is fired at each app startup and whenever a new
+//       // token is generated.
+//     })
+//     .onError((err) {
+//       // Error getting token.
+//     });
+    // await FirebaseMessaging.instance.setAutoInitEnabled(true);
+  runApp(const MaterialApp(
+  debugShowCheckedModeBanner: false,
+  home: MyApp()));}
 
 class MyApp extends StatefulWidget {
 const MyApp({Key? key}) : super(key: key);
@@ -18,6 +38,7 @@ _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
+  
     String channelName = "agoratest";
     String token = "007eJxTYNAvL8/I2/r2v3zfog+frHZPue+yuuSH5pUoj5DyHMP0w38UGEwMjJINTYySLVMsDEwMzMwTTQ0NTYzTUoBEkmViiknaB4uUhkBGhta50syMDBAI4nMyJKbnFyWWpBaXMDAAAH63IsE=";
     
@@ -36,6 +57,7 @@ void initState() {
     super.initState();
     // Set up an instance of Agora engine
     setupVoiceSDKEngine();
+    
 }
 // Clean up the resources when you leave
 @override
@@ -106,6 +128,7 @@ void leave() {
 
 @override
 Widget build(BuildContext context) {
+  
     return MaterialApp(
       debugShowCheckedModeBanner: false,
     scaffoldMessengerKey: scaffoldMessengerKey,
@@ -129,7 +152,7 @@ Widget build(BuildContext context) {
                 Expanded(
                     child: ElevatedButton(
                     child: const Text("Join"),
-                    onPressed: () => {join()},
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VideoCallPage(),)),
                     ),
                 ),
                 const SizedBox(width: 10),

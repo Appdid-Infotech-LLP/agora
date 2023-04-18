@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "70544780137",
+    "project_id": "video-call-222d9",
+    "storage_bucket": "video-call-222d9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:70544780137:android:ff57825d2a35bdadf2abf8",
+        "android_client_info": {
+          "package_name": "com.example.agora"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "70544780137-srtr9co5kj5j4kg9ioq6dm1p965bbfes.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.agora",
+            "certificate_hash": "fd1dc1b30b7a8abe979737a032b586a64459daf9"
+          }
+        },
+        {
+          "client_id": "70544780137-3j87hodn8q7j0nleiraj0vovldut9b2d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNnCGsjpathEhBnYnj0kz1AsN55iZJ4HY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "70544780137-3j87hodn8q7j0nleiraj0vovldut9b2d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
