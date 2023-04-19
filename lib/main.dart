@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:agora/video_call_screen.dart';
+import 'package:agora/voice_call.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -13,45 +14,6 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 const String appId = "402c142c9d804067a51143fd143b9ad4"; //User A
 var playerid = '68e72697-c342-4142-a32d-f4131bb9a9dd'; //User B
-
-Future<void> showCallNotification(String title, String body) async {
-  const channelId = 'com.yourcompany.yourapp.call';
-  const channelName = 'Call Notification';
-  const channelDescription = 'Notification for incoming calls';
-
-  // Create Android notification channel
-  const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    channelId,
-    channelName,
-    importance: Importance.max,
-  );
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-  // Create Android notification details
-  final AndroidNotificationDetails androidPlatformChannelSpecifics =
-      AndroidNotificationDetails(
-    channelId,
-    channelName,
-    importance: Importance.max,
-    priority: Priority.high,
-    fullScreenIntent: true,
-    category: AndroidNotificationCategory.call,
-    icon: 'ic_launcher',
-    sound: RawResourceAndroidNotificationSound('incoming_call'),
-  );
-  const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: AndroidNotificationDetails(channelId, channelName));
-
-  // Show notification
-  await flutterLocalNotificationsPlugin.show(
-    0,
-    title,
-    body,
-    platformChannelSpecifics,
-    payload: 'call',
-  );
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -112,13 +74,14 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String channelName = "agoratest";
   String token =
-      "007eJxTYNAvL8/I2/r2v3zfog+frHZPue+yuuSH5pUoj5DyHMP0w38UGEwMjJINTYySLVMsDEwMzMwTTQ0NTYzTUoBEkmViiknaB4uUhkBGhta50syMDBAI4nMyJKbnFyWWpBaXMDAAAH63IsE=";
+      "007eJxTYJi4SyW54Zl40YxjMRfL2FljJvVeb5T/sHhOaX3hsp6j5u4KDCYGRsmGJkbJlikWBiYGZuaJpoaGJsZpKUAiyTIxxcS+xT6lIZCR4cy3yyyMDBAI4nMyJKbnFyWWpBaXMDAAAOTEIaI=";
 
   int uid = 1; // uid of the local user
 
   int? _remoteUid; // uid of the remote user
   bool _isJoined = false; // Indicates if the local user has joined the channel
   late RtcEngine agoraEngine; // Agora engine instance
+
   var call = 'deny';
 
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
@@ -128,6 +91,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    setupVoiceSDKEngine();
     OneSignal.shared.setNotificationOpenedHandler(
         (OSNotificationOpenedResult result) async {
       // Handle notification opened here
@@ -141,11 +105,33 @@ class _MyAppState extends State<MyApp> {
         accept(context);
         call = 'accept';
       }
+      if (result.action!.actionId == 'calldeny') {
+        OneSignal.shared
+            .removeNotification(result.notification.androidNotificationId!);
+        call = 'calldeny';
+      }
+      if (result.action!.actionId == 'callaccept') {
+        setState(() {
+          call = 'callaccept';
+        });
+        try {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => CallingScreen(
+              isVideoCall: false,
+              username: 'oste',
+              leave: leave,
+            ),
+          ));
+          await join();
+        } catch (error) {
+          print('Failed to join channel: $error');
+        }
+      }
 
       // await showCallNotification(
       //     result.notification.title!, result.notification.body!);
     });
-    OneSignal.shared.setNotificationWillShowInForegroundHandler((event) {
+    OneSignal.shared.setNotificationWillShowInForegroundHandler((event) async {
       OSNotification notification = event.notification;
       List<OSActionButton>? buttons =
           notification.additionalData?['buttons']?.cast<OSActionButton>();
@@ -154,18 +140,34 @@ class _MyAppState extends State<MyApp> {
       OSActionButton acceptButton = buttons!.firstWhere(
           (button) => button.id == 'accept',
           orElse: () => OSActionButton(id: "deny", text: "Deny"));
+      OSActionButton acceptButton2 = buttons.firstWhere(
+          (button) => button.id == 'callaccept',
+          orElse: () => OSActionButton(id: "calldeny", text: "Hang out"));
 
       // Call the accept function if the 'accept' button is tapped
       if (acceptButton.id == 'accept') {
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (context) => VideoCallPage()));
       }
+      if (acceptButton.id == 'callaccept') {
+        try {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => CallingScreen(
+              isVideoCall: false,
+              username: 'oste',
+              leave: leave,
+            ),
+          ));
+          await join();
+        } catch (error) {
+          print('Failed to join channel: $error');
+        }
+      }
 
       // showCallNotification(event.notification.title!, event.notification.body!);
     });
 
     // Set up an instance of Agora engine
-    setupVoiceSDKEngine();
   }
 
 // Clean up the resources when you leave
@@ -197,6 +199,31 @@ class _MyAppState extends State<MyApp> {
       print('Notification sent successfully');
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (context) => VideoCallPage()));
+    } else {
+      print('Notification failed to send: ${response['errors']}');
+    }
+  }
+
+  void sendCall() async {
+    var deviceState = await OneSignal.shared.getDeviceState();
+    var playerId = deviceState?.userId;
+    print(playerId! + 'playerid');
+    var notification2 = OSCreateNotification(
+      playerIds: [playerId, playerid],
+      content: 'User is calling you',
+      heading: 'Incoming Call',
+      buttons: [
+        OSActionButton(
+          text: 'Hang up',
+          id: 'calldeny',
+        ),
+        OSActionButton(text: 'Accept', id: 'callaccept'),
+      ],
+    );
+
+    var response = await OneSignal.shared.postNotification(notification2);
+    if (response['errors'] == null) {
+      print('Notification sent successfully');
     } else {
       print('Notification failed to send: ${response['errors']}');
     }
@@ -239,7 +266,7 @@ class _MyAppState extends State<MyApp> {
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
-  void join() async {
+  join() async {
     // Set channel options including the client role and channel profile
     ChannelMediaOptions options = const ChannelMediaOptions(
       clientRoleType: ClientRoleType.clientRoleBroadcaster,
@@ -258,13 +285,17 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       _isJoined = false;
       _remoteUid = null;
+      call = 'deny';
     });
     agoraEngine.leaveChannel();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (call == 'deny') {
+    if (call == 'deny' || call == 'callaccept') {
+      if (call == 'callaccept') {
+        join();
+      }
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: scaffoldMessengerKey,
@@ -283,7 +314,21 @@ class _MyAppState extends State<MyApp> {
                     Expanded(
                       child: ElevatedButton(
                         child: const Text("Join"),
-                        onPressed: () => join(),
+                        onPressed: () {
+                          join();
+                          sendCall();
+
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CallingScreen(
+                                  username: 'username',
+                                  isVideoCall: false,
+                                  leave: leave,
+                                ),
+                              ));
+                          // sendCallNotification();
+                        },
                       ),
                     ),
                     const SizedBox(width: 10),
