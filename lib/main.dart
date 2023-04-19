@@ -65,14 +65,6 @@ void main() async {
     print("Accepted permission: $accepted");
   });
 
-  OneSignal.shared
-      .setNotificationOpenedHandler((OSNotificationOpenedResult result) async {
-    // Handle notification opened here
-    print('Notification opened: ${result.notification.body}');
-    // await showCallNotification(
-    //     result.notification.title!, result.notification.body!);
-  });
-
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   NotificationSettings settings = await messaging.requestPermission(
     alert: true,
@@ -87,21 +79,27 @@ void main() async {
   var playerId = deviceState!.userId!;
 
   // Handle any messages received while the app is in the foreground
-  FirebaseMessaging.onMessage.listen((message) {
-    // TODO: Handle the message in your app
-    // the call received somewhere
+  // FirebaseMessaging.onMessage.listen((message) {
+  //   // TODO: Handle the message in your app
+  //   // the call received somewhere
 
-    // Handle any messages received while the app is in the background or terminated
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      // TODO: Handle the message in your app
-    });
-  });
+  //   // Handle any messages received while the app is in the background or terminated
+  //   FirebaseMessaging.onMessageOpenedApp.listen((message) {
+  //     // TODO: Handle the message in your app
+  //   });
+  // });
 
-  String? fcmToken = await FirebaseMessaging.instance.getToken();
-  print("FCM token: $fcmToken");
+  // String? fcmToken = await FirebaseMessaging.instance.getToken();
+  // print("FCM token: $fcmToken");
 
   // await FirebaseMessaging.instance.setAutoInitEnabled(true);
   runApp(const MaterialApp(debugShowCheckedModeBanner: false, home: MyApp()));
+}
+
+void accept(BuildContext context) {
+  // Use the context here
+  Navigator.of(context)
+      .push(MaterialPageRoute(builder: (context) => VideoCallPage()));
 }
 
 class MyApp extends StatefulWidget {
@@ -116,11 +114,12 @@ class _MyAppState extends State<MyApp> {
   String token =
       "007eJxTYNAvL8/I2/r2v3zfog+frHZPue+yuuSH5pUoj5DyHMP0w38UGEwMjJINTYySLVMsDEwMzMwTTQ0NTYzTUoBEkmViiknaB4uUhkBGhta50syMDBAI4nMyJKbnFyWWpBaXMDAAAH63IsE=";
 
-  int uid = 2; // uid of the local user
+  int uid = 1; // uid of the local user
 
   int? _remoteUid; // uid of the remote user
   bool _isJoined = false; // Indicates if the local user has joined the channel
   late RtcEngine agoraEngine; // Agora engine instance
+  var call = 'deny';
 
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>(); // Global key to access the scaffold
@@ -129,6 +128,41 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    OneSignal.shared.setNotificationOpenedHandler(
+        (OSNotificationOpenedResult result) async {
+      // Handle notification opened here
+      print('Notification opened: ${result.notification.body}');
+      if (result.action!.actionId == 'deny') {
+        OneSignal.shared
+            .removeNotification(result.notification.androidNotificationId!);
+        call = 'deny';
+      }
+      if (result.action!.actionId == 'accept') {
+        accept(context);
+        call = 'accept';
+      }
+
+      // await showCallNotification(
+      //     result.notification.title!, result.notification.body!);
+    });
+    OneSignal.shared.setNotificationWillShowInForegroundHandler((event) {
+      OSNotification notification = event.notification;
+      List<OSActionButton>? buttons =
+          notification.additionalData?['buttons']?.cast<OSActionButton>();
+
+      // Find the 'accept' action button
+      OSActionButton acceptButton = buttons!.firstWhere(
+          (button) => button.id == 'accept',
+          orElse: () => OSActionButton(id: "deny", text: "Deny"));
+
+      // Call the accept function if the 'accept' button is tapped
+      if (acceptButton.id == 'accept') {
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (context) => VideoCallPage()));
+      }
+
+      // showCallNotification(event.notification.title!, event.notification.body!);
+    });
 
     // Set up an instance of Agora engine
     setupVoiceSDKEngine();
@@ -146,21 +180,23 @@ class _MyAppState extends State<MyApp> {
     var playerId = deviceState?.userId;
     print(playerId! + 'playerid');
     var notification = OSCreateNotification(
-      playerIds: [playerId!, playerid],
+      playerIds: [playerId, playerid],
       content: 'User is calling you',
       heading: 'Incoming Call',
       buttons: [
         OSActionButton(
           text: 'Deny',
-          id: 'view',
+          id: 'deny',
         ),
-        OSActionButton(text: 'Accept', id: 'dismiss'),
+        OSActionButton(text: 'Accept', id: 'accept'),
       ],
     );
 
     var response = await OneSignal.shared.postNotification(notification);
     if (response['errors'] == null) {
       print('Notification sent successfully');
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (context) => VideoCallPage()));
     } else {
       print('Notification failed to send: ${response['errors']}');
     }
@@ -226,58 +262,51 @@ class _MyAppState extends State<MyApp> {
     agoraEngine.leaveChannel();
   }
 
-  Future<void> sendPushNotification(String callFrom) async {
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-    await messaging.sendMessage(
-        to: "007eJxTYNAvL8/I2/r2v3zfog+frHZPue+yuuSH5pUoj5DyHMP0w38UGEwMjJINTYySLVMsDEwMzMwTTQ0NTYzTUoBEkmViiknaB4uUhkBGhta50syMDBAI4nMyJKbnFyWWpBaXMDAAAH63IsE=",
-        data: {
-          'title': 'Incoming Video Call',
-          'body': 'User A is calling you.',
-        });
-    print('Push notification sent successfully!');
-  }
-
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      scaffoldMessengerKey: scaffoldMessengerKey,
-      home: Scaffold(
-          appBar: AppBar(
-            title: const Text('Get started with Voice Calling'),
-          ),
-          body: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            children: [
-              // Status text
-              Container(height: 40, child: Center(child: _status())),
-              // Button Row
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: ElevatedButton(
-                      child: const Text("Join"),
-                      onPressed: () => sendPushNotification('pushkar'),
+    if (call == 'deny') {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        scaffoldMessengerKey: scaffoldMessengerKey,
+        home: Scaffold(
+            appBar: AppBar(
+              title: const Text('Get started with Voice Calling'),
+            ),
+            body: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              children: [
+                // Status text
+                Container(height: 40, child: Center(child: _status())),
+                // Button Row
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: ElevatedButton(
+                        child: const Text("Join"),
+                        onPressed: () => join(),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      child: const Text("Leave"),
-                      onPressed: () => {leave()},
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        child: const Text("Leave"),
+                        onPressed: () => {leave()},
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              ElevatedButton(
-                child: Text('Send Notification'),
-                onPressed: () async {
-                  sendNotification();
-                },
-              )
-            ],
-          )),
-    );
+                  ],
+                ),
+                ElevatedButton(
+                  child: Text('Call'),
+                  onPressed: () async {
+                    sendNotification();
+                  },
+                )
+              ],
+            )),
+      );
+    } else {
+      return Center(child: CircularProgressIndicator());
+    }
   }
 
   Widget _status() {
