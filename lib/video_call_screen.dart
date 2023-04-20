@@ -1,12 +1,9 @@
+import 'package:agora/main.dart';
 import 'package:agora_uikit/agora_uikit.dart';
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 const appId = '402c142c9d804067a51143fd143b9ad4';
-String channelName = 'agoratest';
-String token =
-    '007eJxTYJi4SyW54Zl40YxjMRfL2FljJvVeb5T/sHhOaX3hsp6j5u4KDCYGRsmGJkbJlikWBiYGZuaJpoaGJsZpKUAiyTIxxcS+xT6lIZCR4cy3yyyMDBAI4nMyJKbnFyWWpBaXMDAAAOTEIaI=';
-int uid = 1;
 
 class VideoCallPage extends StatefulWidget {
   const VideoCallPage({Key? key}) : super(key: key);

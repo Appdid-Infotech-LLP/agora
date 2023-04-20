@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
+
+import 'package:agora/incoming_call.dart';
 import 'package:agora/video_call_screen.dart';
 import 'package:agora/voice_call.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -14,7 +15,10 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 const String appId = "402c142c9d804067a51143fd143b9ad4"; //User A
 var playerid = '68e72697-c342-4142-a32d-f4131bb9a9dd'; //User B
-
+int uid = 0;
+String channelName = "agoratest";
+String token =
+    "007eJxTYOjMezrTROPUziOblW9fdj0iUHbASW/xETm9De+6Ytj9ZyxVYDAxMEo2NDFKtkyxMDAxMDNPNDU0NDFOSwESSZaJKSbTrzikNAQyMmzdpsPCyACBID4nQ2J6flFiSWpxCQMDAA7nIak=";
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -72,11 +76,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String channelName = "agoratest";
-  String token =
-      "007eJxTYJi4SyW54Zl40YxjMRfL2FljJvVeb5T/sHhOaX3hsp6j5u4KDCYGRsmGJkbJlikWBiYGZuaJpoaGJsZpKUAiyTIxxcS+xT6lIZCR4cy3yyyMDBAI4nMyJKbnFyWWpBaXMDAAAOTEIaI=";
-
-  int uid = 1; // uid of the local user
+  // uid of the local user
 
   int? _remoteUid; // uid of the remote user
   bool _isJoined = false; // Indicates if the local user has joined the channel
@@ -92,79 +92,56 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     setupVoiceSDKEngine();
-    OneSignal.shared.setNotificationOpenedHandler(
-        (OSNotificationOpenedResult result) async {
-      // Handle notification opened here
-      print('Notification opened: ${result.notification.body}');
-      if (result.action!.actionId == 'deny') {
-        OneSignal.shared
-            .removeNotification(result.notification.androidNotificationId!);
-        call = 'deny';
-      }
-      if (result.action!.actionId == 'accept') {
-        accept(context);
-        call = 'accept';
-      }
-      if (result.action!.actionId == 'calldeny') {
-        OneSignal.shared
-            .removeNotification(result.notification.androidNotificationId!);
-        call = 'calldeny';
-      }
-      if (result.action!.actionId == 'callaccept') {
-        setState(() {
-          call = 'callaccept';
-        });
-        try {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (context) => CallingScreen(
-              isVideoCall: false,
-              username: 'oste',
-              leave: leave,
-            ),
-          ));
-          await join();
-        } catch (error) {
-          print('Failed to join channel: $error');
-        }
-      }
+    // OneSignal.shared.setNotificationOpenedHandler(
+    //     (OSNotificationOpenedResult result) async {
+    //   // Handle notification opened here
+    //   print('Notification opened: ${result.notification.body}');
+    //   if (result.action!.actionId == 'deny') {
+    //     OneSignal.shared
+    //         .removeNotification(result.notification.androidNotificationId!);
+    //     call = 'deny';
+    //   }
+    //   if (result.action!.actionId == 'accept') {
+    //     accept(context);
+    //     call = 'accept';
+    //   }
+    //   if (result.action!.actionId == 'calldeny') {
+    //     OneSignal.shared
+    //         .removeNotification(result.notification.androidNotificationId!);
+    //     call = 'calldeny';
+    //   }
+    //   if (result.action!.actionId == 'callaccept') {
+    //     setState(() {
+    //       call = 'callaccept';
+    //     });
+    //     try {
+    //       Navigator.of(context).push(MaterialPageRoute(
+    //         builder: (context) => CallingScreen(
+    //           isVideoCall: false,
+    //           username: 'oste',
+    //           engine: agoraEngine,
+    //         ),
+    //       ));
+    //       await join();
+    //     } catch (error) {
+    //       print('Failed to join channel: $error');
+    //     }
+    //   }
 
-      // await showCallNotification(
-      //     result.notification.title!, result.notification.body!);
-    });
+    //   // await showCallNotification(
+    //   //     result.notification.title!, result.notification.body!);
+    // });
+
     OneSignal.shared.setNotificationWillShowInForegroundHandler((event) async {
-      OSNotification notification = event.notification;
-      List<OSActionButton>? buttons =
-          notification.additionalData?['buttons']?.cast<OSActionButton>();
-
-      // Find the 'accept' action button
-      OSActionButton acceptButton = buttons!.firstWhere(
-          (button) => button.id == 'accept',
-          orElse: () => OSActionButton(id: "deny", text: "Deny"));
-      OSActionButton acceptButton2 = buttons.firstWhere(
-          (button) => button.id == 'callaccept',
-          orElse: () => OSActionButton(id: "calldeny", text: "Hang out"));
-
-      // Call the accept function if the 'accept' button is tapped
-      if (acceptButton.id == 'accept') {
-        Navigator.of(context)
-            .push(MaterialPageRoute(builder: (context) => VideoCallPage()));
-      }
-      if (acceptButton.id == 'callaccept') {
-        try {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (context) => CallingScreen(
-              isVideoCall: false,
-              username: 'oste',
-              leave: leave,
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => IncomingCallScreen(
+              callerName: 'Pushkar',
+              hasVideo: true,
+              engine: agoraEngine,
             ),
           ));
-          await join();
-        } catch (error) {
-          print('Failed to join channel: $error');
-        }
-      }
-
-      // showCallNotification(event.notification.title!, event.notification.body!);
     });
 
     // Set up an instance of Agora engine
@@ -173,7 +150,6 @@ class _MyAppState extends State<MyApp> {
 // Clean up the resources when you leave
   @override
   void dispose() async {
-    await agoraEngine.leaveChannel();
     super.dispose();
   }
 
@@ -182,7 +158,7 @@ class _MyAppState extends State<MyApp> {
     var playerId = deviceState?.userId;
     print(playerId! + 'playerid');
     var notification = OSCreateNotification(
-      playerIds: [playerId, playerid],
+      playerIds: [playerid],
       content: 'User is calling you',
       heading: 'Incoming Call',
       buttons: [
@@ -209,7 +185,7 @@ class _MyAppState extends State<MyApp> {
     var playerId = deviceState?.userId;
     print(playerId! + 'playerid');
     var notification2 = OSCreateNotification(
-      playerIds: [playerId, playerid],
+      playerIds: [playerid],
       content: 'User is calling you',
       heading: 'Incoming Call',
       buttons: [
@@ -238,30 +214,30 @@ class _MyAppState extends State<MyApp> {
     await agoraEngine.initialize(const RtcEngineContext(appId: appId));
 
     // Register the event handler
-    agoraEngine.registerEventHandler(
-      RtcEngineEventHandler(
-        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
-          showMessage(
-              "Local user uid:${connection.localUid} joined the channel");
-          setState(() {
-            _isJoined = true;
-          });
-        },
-        onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
-          showMessage("Remote user uid:$remoteUid joined the channel");
-          setState(() {
-            _remoteUid = remoteUid;
-          });
-        },
-        onUserOffline: (RtcConnection connection, int remoteUid,
-            UserOfflineReasonType reason) {
-          showMessage("Remote user uid:$remoteUid left the channel");
-          setState(() {
-            _remoteUid = null;
-          });
-        },
-      ),
-    );
+    // agoraEngine.registerEventHandler(
+    //   RtcEngineEventHandler(
+    //     onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+    //       showMessage(
+    //           "Local user uid:${connection.localUid} joined the channel");
+    //       setState(() {
+    //         _isJoined = true;
+    //       });
+    //     },
+    //     onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
+    //       showMessage("Remote user uid:$remoteUid joined the channel");
+    //       setState(() {
+    //         _remoteUid = remoteUid;
+    //       });
+    //     },
+    //     onUserOffline: (RtcConnection connection, int remoteUid,
+    //         UserOfflineReasonType reason) {
+    //       showMessage("Remote user uid:$remoteUid left the channel");
+    //       setState(() {
+    //         _remoteUid = null;
+    //       });
+    //     },
+    //   ),
+    // );
   }
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -292,22 +268,24 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    if (call == 'deny' || call == 'callaccept') {
-      if (call == 'callaccept') {
-        join();
-      }
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        scaffoldMessengerKey: scaffoldMessengerKey,
-        home: Scaffold(
-            appBar: AppBar(
-              title: const Text('Get started with Voice Calling'),
-            ),
-            body: ListView(
+    // if (call == 'deny' || call == 'callaccept') {
+    //   if (call == 'callaccept') {
+    //     join();
+    //   }
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: scaffoldMessengerKey,
+      home: Scaffold(
+          appBar: AppBar(
+            title: const Text('Get started with Voice Calling'),
+          ),
+          body: Center(
+            child: ListView(
+              shrinkWrap: true,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               children: [
                 // Status text
-                Container(height: 40, child: Center(child: _status())),
+                // Container(height: 40, child: Center(child: _status())),
                 // Button Row
                 Row(
                   children: <Widget>[
@@ -315,7 +293,6 @@ class _MyAppState extends State<MyApp> {
                       child: ElevatedButton(
                         child: const Text("Join"),
                         onPressed: () {
-                          join();
                           sendCall();
 
                           Navigator.push(
@@ -324,7 +301,7 @@ class _MyAppState extends State<MyApp> {
                                 builder: (context) => CallingScreen(
                                   username: 'username',
                                   isVideoCall: false,
-                                  leave: leave,
+                                  engine: agoraEngine,
                                 ),
                               ));
                           // sendCallNotification();
@@ -347,31 +324,30 @@ class _MyAppState extends State<MyApp> {
                   },
                 )
               ],
-            )),
-      );
-    } else {
-      return Center(child: CircularProgressIndicator());
-    }
-  }
-
-  Widget _status() {
-    String statusText;
-
-    if (!_isJoined)
-      statusText = 'Join a channel';
-    else if (_remoteUid == null)
-      statusText = 'Waiting for a remote user to join...';
-    else
-      statusText = 'Connected to remote user, uid:$_remoteUid';
-
-    return Text(
-      statusText,
+            ),
+          )),
     );
   }
-
-  showMessage(String message) {
-    scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
-      content: Text(message),
-    ));
-  }
 }
+
+  // Widget _status() {
+  //   String statusText;
+
+  //   if (!_isJoined)
+  //     statusText = 'Join a channel';
+  //   else if (_remoteUid == null)
+  //     statusText = 'Waiting for a remote user to join...';
+  //   else
+  //     statusText = 'Connected to remote user, uid:$_remoteUid';
+
+  //   return Text(
+  //     statusText,
+  //   );
+  // }
+
+  // showMessage(String message) {
+  //   scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
+  //     content: Text(message),
+  //   ));
+  // }
+

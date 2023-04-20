@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:agora_uikit/agora_uikit.dart';
 import 'package:flutter/material.dart';
@@ -7,10 +9,14 @@ import 'main.dart';
 class CallingScreen extends StatefulWidget {
   final String username;
   final bool isVideoCall;
-  final void Function() leave; // define the leave method as a parameter
+  final RtcEngine engine;
+  // define the leave method as a parameter
 
-  CallingScreen(
-      {required this.username, required this.isVideoCall, required this.leave});
+  const CallingScreen(
+      {super.key,
+      required this.username,
+      required this.isVideoCall,
+      required this.engine});
 
   @override
   _CallingScreenState createState() => _CallingScreenState();
@@ -19,36 +25,21 @@ class CallingScreen extends StatefulWidget {
 class _CallingScreenState extends State<CallingScreen> {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>(); // Global key to access the scaffold
-  void _endCall() {
-    widget.leave(); // call the leave method using the widget parameter
+  void _endCall() async {
+    // call the leave method using the widget parameter
+    widget.engine.leaveChannel();
     Navigator.pop(context);
   }
 
-  String channelName = "agoratest";
-  String token =
-      "007eJxTYJi4SyW54Zl40YxjMRfL2FljJvVeb5T/sHhOaX3hsp6j5u4KDCYGRsmGJkbJlikWBiYGZuaJpoaGJsZpKUAiyTIxxcS+xT6lIZCR4cy3yyyMDBAI4nMyJKbnFyWWpBaXMDAAAOTEIaI=";
+  int _secondsElapsed = 0;
+  late Timer _timer;
+  bool _isTimerRunning = false;
 
-  int uid = 1; // uid of the local user
+  // uid of the local user
 
   int? _remoteUid; // uid of the remote user
   bool _isJoined = false; // Indicates if the local user has joined the channel
   late RtcEngine agoraEngine; // Agora engine instance
-
-  void join() async {
-    // Set channel options including the client role and channel profile
-    ChannelMediaOptions options = const ChannelMediaOptions(
-      clientRoleType: ClientRoleType.clientRoleBroadcaster,
-      channelProfile: ChannelProfileType.channelProfileCommunication,
-    );
-
-    await agoraEngine.joinChannel(
-      token: token,
-      channelId: channelName,
-      options: options,
-      uid: uid,
-    );
-  }
-
   Future<void> setupVoiceSDKEngine() async {
     // retrieve or request microphone permission
     await [Permission.microphone].request();
@@ -84,17 +75,62 @@ class _CallingScreenState extends State<CallingScreen> {
     );
   }
 
-  showMessage(String message) {
-    scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
-      content: Text(message),
-    ));
+  join() async {
+    // Set channel options including the client role and channel profile
+    ChannelMediaOptions options = const ChannelMediaOptions(
+      clientRoleType: ClientRoleType.clientRoleBroadcaster,
+      channelProfile: ChannelProfileType.channelProfileCommunication,
+    );
+
+    await widget.engine.joinChannel(
+      token: token,
+      channelId: channelName,
+      options: options,
+      uid: uid,
+    );
   }
 
   @override
   void initState() {
     super.initState();
     // Initialize Agora client and join the channel
+
     join();
+    widget.engine.registerEventHandler(RtcEngineEventHandler(
+      onUserJoined: (RtcConnection connection, int uid, int elapsed) {
+        if (!_isTimerRunning) {
+          _startTimer();
+        }
+      },
+    ));
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _stopTimer();
+    widget.engine.unregisterEventHandler(RtcEngineEventHandler());
+  }
+
+  void _startTimer() {
+    _isTimerRunning = true;
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _secondsElapsed++;
+      });
+    });
+  }
+
+  void _stopTimer() {
+    _isTimerRunning = false;
+    _timer.cancel();
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
   }
 
   @override
@@ -104,12 +140,9 @@ class _CallingScreenState extends State<CallingScreen> {
         body: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                Color(0xFF5170EB),
-                Color(0xFFBD5AF2),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.blue[900]!, Colors.blue[600]!],
             ),
           ),
           child: Column(
@@ -127,8 +160,10 @@ class _CallingScreenState extends State<CallingScreen> {
               ),
               SizedBox(height: 24),
               CircleAvatar(
-                radius: 80,
-                backgroundImage: AssetImage('assets/avatar.png'),
+                radius: 70,
+                backgroundImage: NetworkImage(
+                  'https://picsum.photos/200/300',
+                ),
               ),
               SizedBox(height: 16),
               Text(
@@ -138,6 +173,16 @@ class _CallingScreenState extends State<CallingScreen> {
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+              Center(
+                child: Text(
+                  _formatDuration(Duration(seconds: _secondsElapsed)),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               Spacer(),
@@ -166,7 +211,9 @@ class _CallingScreenState extends State<CallingScreen> {
                         color: Colors.red),
                   ),
                   FloatingActionButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      join();
+                    },
                     backgroundColor: Colors.white,
                     child: Icon(
                         widget.isVideoCall ? Icons.videocam : Icons.call,
@@ -185,5 +232,11 @@ class _CallingScreenState extends State<CallingScreen> {
         ),
       ),
     );
+  }
+
+  showMessage(String message) {
+    scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
+      content: Text(message),
+    ));
   }
 }
