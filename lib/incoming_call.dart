@@ -67,7 +67,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   FloatingActionButton(
-                    key: UniqueKey(),
+                    heroTag: 'b2',
                     backgroundColor: Colors.red,
                     onPressed: () {
                       Navigator.pop(context);
@@ -75,10 +75,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
                     child: Icon(Icons.call_end),
                   ),
                   FloatingActionButton(
-                    key: UniqueKey(),
+                    heroTag: 'b1',
                     backgroundColor: Colors.green,
                     onPressed: () async {
-                      Navigator.of(context).push(MaterialPageRoute(
+                      Navigator.of(context).pushReplacement(MaterialPageRoute(
                         builder: (context) => CallingScreen(
                           isVideoCall: false,
                           username: 'oste',

@@ -190,6 +190,7 @@ class _CallingScreenState extends State<CallingScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   FloatingActionButton(
+                    heroTag: '1',
                     onPressed: () {
                       _endCall();
                     },
@@ -197,11 +198,13 @@ class _CallingScreenState extends State<CallingScreen> {
                     child: Icon(Icons.call_end, color: Colors.red),
                   ),
                   FloatingActionButton(
+                    heroTag: '2',
                     onPressed: () {},
                     backgroundColor: Colors.white,
                     child: Icon(Icons.mic_off, color: Colors.red),
                   ),
                   FloatingActionButton(
+                    heroTag: '3',
                     onPressed: () {},
                     backgroundColor: Colors.white,
                     child: Icon(
@@ -211,6 +214,7 @@ class _CallingScreenState extends State<CallingScreen> {
                         color: Colors.red),
                   ),
                   FloatingActionButton(
+                    heroTag: '4',
                     onPressed: () {
                       join();
                     },
@@ -220,6 +224,7 @@ class _CallingScreenState extends State<CallingScreen> {
                         color: Color(0xFF5170EB)),
                   ),
                   FloatingActionButton(
+                    heroTag: '5',
                     onPressed: () {},
                     backgroundColor: Colors.white,
                     child: Icon(Icons.volume_up, color: Color(0xFF5170EB)),

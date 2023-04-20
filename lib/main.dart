@@ -14,8 +14,8 @@ import 'package:http/http.dart' as http;
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 const String appId = "402c142c9d804067a51143fd143b9ad4"; //User A
-var playerid = '68e72697-c342-4142-a32d-f4131bb9a9dd'; //User B
-int uid = 0;
+var playerid = '13f2816e-773c-41a5-9f43-fb047fc0291f'; //User B
+int uid = 2;
 String channelName = "agoratest";
 String token =
     "007eJxTYOjMezrTROPUziOblW9fdj0iUHbASW/xETm9De+6Ytj9ZyxVYDAxMEo2NDFKtkyxMDAxMDNPNDU0NDFOSwESSZaJKSbTrzikNAQyMmzdpsPCyACBID4nQ2J6flFiSWpxCQMDAA7nIak=";
@@ -23,26 +23,30 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   //Remove this method to stop OneSignal Debugging
+  initializeNotifications();
 
   OneSignal.shared.setAppId("6e0b107d-26de-436e-be91-e572521d2308");
+  OneSignal.shared
+      .promptUserForPushNotificationPermission()
+      .then((accepted) {});
 
 // The promptForPushNotificationsWithUserResponse function will show the iOS or Android push notification prompt. We recommend removing the following code and instead using an In-App Message to prompt for notification permission
-  OneSignal.shared.promptUserForPushNotificationPermission().then((accepted) {
-    print("Accepted permission: $accepted");
-  });
+  // OneSignal.shared.promptUserForPushNotificationPermission();
 
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   NotificationSettings settings = await messaging.requestPermission(
     alert: true,
-    announcement: false,
+    announcement: true,
     badge: true,
-    carPlay: false,
+    carPlay: true,
     criticalAlert: true,
-    provisional: false,
+    provisional: true,
     sound: true,
   );
+
   var deviceState = await OneSignal.shared.getDeviceState();
-  var playerId = deviceState!.userId!;
+  var playerId = deviceState!.userId;
+  print(playerId! + 'playerid');
 
   // Handle any messages received while the app is in the foreground
   // FirebaseMessaging.onMessage.listen((message) {
@@ -60,6 +64,49 @@ void main() async {
 
   // await FirebaseMessaging.instance.setAutoInitEnabled(true);
   runApp(const MaterialApp(debugShowCheckedModeBanner: false, home: MyApp()));
+}
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+Future<void> initializeNotifications() async {
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('ic_launcher');
+
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+}
+
+const _androidNotificationChannelId = 'default_notification_channel_id';
+const _androidNotificationChannelName = 'Default';
+const _androidNotificationChannelDescription =
+    'The default notification channel for the app';
+
+Future<void> showNotification(
+  String title,
+  String body, {
+  required int notificationId,
+}) async {
+  const androidPlatformChannelSpecifics = AndroidNotificationDetails(
+    _androidNotificationChannelId,
+    _androidNotificationChannelName,
+    importance: Importance.high,
+    priority: Priority.high,
+  );
+
+  const platformChannelSpecifics =
+      NotificationDetails(android: androidPlatformChannelSpecifics);
+
+  await flutterLocalNotificationsPlugin.show(
+    notificationId,
+    title,
+    body,
+    platformChannelSpecifics,
+    payload: 'item x',
+  );
 }
 
 void accept(BuildContext context) {
@@ -92,56 +139,63 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     setupVoiceSDKEngine();
-    // OneSignal.shared.setNotificationOpenedHandler(
-    //     (OSNotificationOpenedResult result) async {
-    //   // Handle notification opened here
-    //   print('Notification opened: ${result.notification.body}');
-    //   if (result.action!.actionId == 'deny') {
-    //     OneSignal.shared
-    //         .removeNotification(result.notification.androidNotificationId!);
-    //     call = 'deny';
-    //   }
-    //   if (result.action!.actionId == 'accept') {
-    //     accept(context);
-    //     call = 'accept';
-    //   }
-    //   if (result.action!.actionId == 'calldeny') {
-    //     OneSignal.shared
-    //         .removeNotification(result.notification.androidNotificationId!);
-    //     call = 'calldeny';
-    //   }
-    //   if (result.action!.actionId == 'callaccept') {
-    //     setState(() {
-    //       call = 'callaccept';
-    //     });
-    //     try {
-    //       Navigator.of(context).push(MaterialPageRoute(
-    //         builder: (context) => CallingScreen(
-    //           isVideoCall: false,
-    //           username: 'oste',
-    //           engine: agoraEngine,
-    //         ),
-    //       ));
-    //       await join();
-    //     } catch (error) {
-    //       print('Failed to join channel: $error');
-    //     }
-    //   }
 
-    //   // await showCallNotification(
-    //   //     result.notification.title!, result.notification.body!);
-    // });
-
-    OneSignal.shared.setNotificationWillShowInForegroundHandler((event) async {
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => IncomingCallScreen(
-              callerName: 'Pushkar',
-              hasVideo: true,
+    OneSignal.shared.setNotificationOpenedHandler(
+        (OSNotificationOpenedResult result) async {
+      // result.notification.contentAvailable = true;
+      // Handle notification opened here
+      print('Notification opened: ${result.notification.body}');
+      if (result.action!.actionId == 'deny') {
+        OneSignal.shared
+            .removeNotification(result.notification.androidNotificationId!);
+        call = 'deny';
+      }
+      if (result.action!.actionId == 'accept') {
+        accept(context);
+        call = 'accept';
+      }
+      if (result.action!.actionId == 'calldeny') {
+        OneSignal.shared
+            .removeNotification(result.notification.androidNotificationId!);
+        call = 'calldeny';
+      }
+      if (result.action!.actionId == 'callaccept') {
+        setState(() {
+          call = 'callaccept';
+        });
+        try {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => CallingScreen(
+              isVideoCall: false,
+              username: 'oste',
               engine: agoraEngine,
             ),
           ));
+        } catch (error) {
+          print('Failed to join channel: $error');
+        }
+      }
+    });
+
+    OneSignal.shared.setNotificationWillShowInForegroundHandler((event) async {
+      event.complete(null);
+      if (event.notification.additionalData!['method'] == 'sendNotification') {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VideoCallPage(),
+            ));
+      } else {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => IncomingCallScreen(
+                callerName: 'Pushkar',
+                hasVideo: true,
+                engine: agoraEngine,
+              ),
+            ));
+      }
     });
 
     // Set up an instance of Agora engine
@@ -158,6 +212,8 @@ class _MyAppState extends State<MyApp> {
     var playerId = deviceState?.userId;
     print(playerId! + 'playerid');
     var notification = OSCreateNotification(
+      additionalData: {'method': 'sendNotification'},
+      contentAvailable: true,
       playerIds: [playerid],
       content: 'User is calling you',
       heading: 'Incoming Call',
@@ -183,8 +239,11 @@ class _MyAppState extends State<MyApp> {
   void sendCall() async {
     var deviceState = await OneSignal.shared.getDeviceState();
     var playerId = deviceState?.userId;
+
     print(playerId! + 'playerid');
     var notification2 = OSCreateNotification(
+      additionalData: {'method': 'sendCall'},
+      contentAvailable: true,
       playerIds: [playerid],
       content: 'User is calling you',
       heading: 'Incoming Call',
