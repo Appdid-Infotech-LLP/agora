@@ -178,6 +178,9 @@ class _MyAppState extends State<MyApp> {
     });
 
     OneSignal.shared.setNotificationWillShowInForegroundHandler((event) async {
+      if (event.notification.additionalData!['remove'] == 'yes') {
+        OneSignal.shared.clearOneSignalNotifications();
+      }
       event.complete(null);
       if (event.notification.additionalData!['method'] == 'sendNotification') {
         Navigator.push(
@@ -257,6 +260,7 @@ class _MyAppState extends State<MyApp> {
     );
 
     var response = await OneSignal.shared.postNotification(notification2);
+
     if (response['errors'] == null) {
       print('Notification sent successfully');
     } else {

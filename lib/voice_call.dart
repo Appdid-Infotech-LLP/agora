@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:agora_uikit/agora_uikit.dart';
 import 'package:flutter/material.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 import 'main.dart';
 
@@ -27,6 +28,10 @@ class _CallingScreenState extends State<CallingScreen> {
       GlobalKey<ScaffoldMessengerState>(); // Global key to access the scaffold
   void _endCall() async {
     // call the leave method using the widget parameter
+    OneSignal.shared.postNotification(OSCreateNotification(
+        playerIds: [playerid],
+        content: 'remove',
+        additionalData: {'remove': 'yes'}));
     widget.engine.leaveChannel();
     Navigator.pop(context);
   }
